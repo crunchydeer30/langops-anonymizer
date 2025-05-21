@@ -1,0 +1,12 @@
+default_score_threshold: 0.4
+supported_languages: ["en", "ru", "xx"]
+feedback_enabled: false
+allow_list_lookup_interval: 60
+registry_path: null
+log_decision_process: false
+analysis_explanation: false
+decision_factors:
+  PATTERN_LENGTH: 0.5
+  PATTERN_COMPLEXITY: 0.5
+  CONTEXT_SIMILARITY: 0.65
+entity_priority_list: []
