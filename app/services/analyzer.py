@@ -15,23 +15,19 @@ class AnalyzerService:
     def __init__(self, settings=None):
         settings = settings or get_settings()
         
-        # Create the analyzer engine provider
         provider = AnalyzerEngineProvider(
             # analyzer_engine_conf_file=settings.analyzer_conf_file,
             # nlp_engine_conf_file=settings.nlp_conf_file,
         )
         
-        # Create engine with default configuration
         self.engine = provider.create_engine()
         
 
     def analyze(self, req_model: AnalyzeRequest) -> List[EntityResult]:
-        """Analyze text for PII entities."""
         if not req_model.text or not req_model.language:
             return []
             
         try:
-            # AnalyzerRequest expects a dictionary as a single argument, not kwargs
             req = AnalyzerRequest(req_model.model_dump(exclude_none=True))
             results = self.engine.analyze(
                 text=req.text,
