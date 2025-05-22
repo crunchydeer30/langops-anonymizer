@@ -23,7 +23,6 @@ class AnalyzeRequest(BaseModel):
 
 
 class EntityResult(BaseModel):
-    """Result model for detected PII entities."""
     entity_type: str
     start: int
     end: int

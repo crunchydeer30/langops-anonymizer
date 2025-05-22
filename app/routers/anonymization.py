@@ -6,7 +6,7 @@ from app.services.anonymizer import AnonymizerService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["anonymization"])
+router = APIRouter(prefix="/system", tags=["anonymization"])
 
 @router.post(
     "/anonymize",
@@ -62,7 +62,6 @@ async def deanonymize(req: DeanonymizeRequest, request: Request):
     summary="Get available anonymizers"
 )
 async def anonymizers(request: Request):
-    """Return a list of supported anonymizer methods."""
     if not hasattr(request.app.state, "anonymizer"):
         request.app.state.anonymizer = AnonymizerService()
         
@@ -74,7 +73,6 @@ async def anonymizers(request: Request):
     summary="Get available deanonymizers"
 )
 async def deanonymizers(request: Request):
-    """Return a list of supported deanonymizer methods."""
     if not hasattr(request.app.state, "anonymizer"):
         request.app.state.anonymizer = AnonymizerService()
         

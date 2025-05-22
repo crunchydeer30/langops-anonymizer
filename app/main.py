@@ -34,7 +34,6 @@ async def add_process_time_header(request: Request, call_next):
 
 @app.on_event("startup")
 def startup_event():
-    """Pre-load services on startup to avoid first-request lag."""
     logger.info("Pre-loading analyzer engine...")
     app.state.analyzer = AnalyzerService(get_settings())
     logger.info("Analyzer engine loaded successfully")
@@ -43,7 +42,6 @@ def startup_event():
     app.state.anonymizer = AnonymizerService()
     logger.info("Anonymizer engine loaded successfully")
 
-    # Pre-load translation anonymizer to prevent first-request delay
     logger.info("Pre-loading translation anonymizer service...")
     app.state.translation_anonymizer = TranslationAnonymizerService()
     logger.info("Translation anonymizer loaded successfully")
@@ -55,10 +53,16 @@ app.include_router(translation.router)
 
 if __name__ == "__main__":
     import uvicorn
+    import argparse
+    parser = argparse.ArgumentParser(description="Run LangOps NER API")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Bind address")
+    parser.add_argument("--port", type=int, default=settings.port, help="Port to listen on")
+    parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
+    args = parser.parse_args()
     uvicorn.run(
         "app.main:app", 
-        host="0.0.0.0", 
-        port=settings.port, 
-        reload=True,
+        host=args.host, 
+        port=args.port, 
+        reload=args.reload,
         log_level=settings.log_level.lower(),
     )

@@ -11,7 +11,6 @@ from presidio_analyzer.predefined_recognizers import TransformersRecognizer
 logger = logging.getLogger(__name__)
 
 class AnalyzerService:
-    """Presidio Analyzer wrapper providing application logic."""
     def __init__(self, settings=None):
         settings = settings or get_settings()
         

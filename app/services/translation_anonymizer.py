@@ -11,76 +11,50 @@ class TranslationAnonymizerService:
     def __init__(self, settings: Any = None):
         self.analyzer = AnalyzerEngine()
         self.anonymizer = AnonymizerEngine()
-        self.entity_mappings: Dict[str, Dict[str, Any]] = {}
 
-    def analyze_and_anonymize(
-        self, text: str, language: str, session_id: str = "default"
-    ) -> Tuple[str, Dict[str, Any], List[Dict[str, Any]], List[Dict[str, str]]]:
+    def analyze_and_anonymize(self, text: str, language: str) -> Tuple[str, List[Dict[str, Any]]]:
         if not text or not language:
-            return text, {}, [], []
+            return text, []
 
         analyzer_results = self.analyzer.analyze(text=text, language=language)
         if not analyzer_results:
-            return text, {}, [], []
+            return text, []
 
-        mapping: Dict[str, Dict[str, Any]] = {}
-        counts: Dict[str, int] = {}
-        analysis_results_output: List[Dict[str, Any]] = []
-        analyzer_results = sorted(analyzer_results, key=lambda r: r.start)
-        for result in analyzer_results:
-            etype = result.entity_type
-            start, end = result.start, result.end
-            orig = text[start:end]
-            idx = counts.get(etype, 0)
-            counts[etype] = idx + 1
-            key = f"{start}:{end}"
-            mapping[key] = {"value": orig, "entity_type": etype, "index": idx}
-            analysis_results_output.append({
-                "entity_type": etype,
-                "start": start,
-                "end": end,
-                "score": result.score,
-                "value": orig,
-            })
+        unique_spans: Dict[Tuple[int, int], Any] = {}
+        for res in sorted(analyzer_results, key=lambda r: (r.start, -r.score)):
+            key = (res.start, res.end)
+            if key not in unique_spans:
+                unique_spans[key] = res
 
-        operators: Dict[str, OperatorConfig] = {}
-        for etype in counts:
-            operators[etype] = OperatorConfig(
-                "replace", {"new_value": f"<{etype}>"}
-            )
+        masked_results = list(unique_spans.values())
+        masked_results.sort(key=lambda r: r.start)
+
+        operators = {
+            res.entity_type: OperatorConfig("replace", {"new_value": f"<{res.entity_type}>"})
+            for res in masked_results
+        }
 
         anon_result = self.anonymizer.anonymize(
-            text=text, analyzer_results=analyzer_results, operators=operators
+            text=text,
+            analyzer_results=masked_results,
+            operators=operators,
         )
-        anonymized_text = anon_result.text
+        anonymized_text_generic = anon_result.text
 
-        replacement_list: List[Dict[str, str]] = []
-        for key, m in sorted(mapping.items(), key=lambda kv: int(kv[0].split(":")[0])):
-            placeholder = f"<{m['entity_type']}>"
-            replacement_list.append({"original": m["value"], "anonymized": placeholder})
+        mapping_list: List[Dict[str, Any]] = []
+        anonymized_text = anonymized_text_generic
+        for idx, res in enumerate(masked_results):
+            placeholder = f"<{res.entity_type}_{idx}>"
+            mapping_list.append({
+                "placeholder": placeholder,
+                "start": res.start,
+                "end": res.end,
+                "entity_type": res.entity_type,
+                "original": text[res.start:res.end],
+            })
 
-        self.entity_mappings[session_id] = mapping
-        return anonymized_text, mapping, analysis_results_output, replacement_list
+            generic = f"<{res.entity_type}>"
+            anonymized_text = anonymized_text.replace(generic, placeholder, 1)
 
-    def deanonymize_translated(self, translated_text: str, session_id: str) -> str:
-        """Replace <ENTITY_TYPE> tokens in translated text with original values in order."""
-        if session_id not in self.entity_mappings:
-            raise ValueError(f"No mappings found for session {session_id}")
-        result = translated_text
+        return anonymized_text, mapping_list
 
-        entries = sorted(
-            self.entity_mappings[session_id].items(),
-            key=lambda kv: int(kv[0].split(":")[0])
-        )
-        for _, m in entries:
-            placeholder = f"<{m['entity_type']}>"
-            result = result.replace(placeholder, m["value"], 1)
-        return result
-
-    def get_stored_mappings(self, session_id: str) -> Dict[str, Any]:
-        """Return stored mappings for a session."""
-        return self.entity_mappings.get(session_id, {})
-
-    def clear_session(self, session_id: str) -> None:
-        """Clear stored mappings for a session."""
-        self.entity_mappings.pop(session_id, None)

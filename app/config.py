@@ -74,7 +74,6 @@ def get_settings() -> Settings:
     return settings
 
 def configure_logging() -> None:
-    """Configure root logger from settings."""
     import logging
     settings = get_settings()
     logging.basicConfig(

@@ -5,7 +5,7 @@ from app.services.analyzer import AnalyzerService
 from app.config import get_settings
 from functools import lru_cache
 
-router = APIRouter(tags=["analysis"])
+router = APIRouter(prefix="/system", tags=["analysis"])
 
 @lru_cache()
 def get_analyzer_service() -> AnalyzerService:
